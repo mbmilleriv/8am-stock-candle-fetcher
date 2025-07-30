@@ -49,3 +49,4 @@ IBM     # IBM
 BABA    # Allibaba
 MU      # Micron
 LIDR    # AEye Inc 
+SOFI    #Sofi Bank
