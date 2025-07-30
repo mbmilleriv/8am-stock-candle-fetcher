@@ -14,6 +14,7 @@ NVDA    # NVIDIA
 TSLA    # Tesla
 AMD     # Advanced Micro Devices
 NFLX    # Netflix
+PLTR    # Plantir
 
 # === FINANCIAL SECTOR ===
 JPM     # JPMorgan Chase
@@ -27,6 +28,24 @@ IWM     # Russell 2000 ETF
 
 # === WEEKLY FOCUS ===
 # Add stocks you're specifically watching this week below
-PLTR    # Palantir
 COIN    # Coinbase
 RIVN    # Rivian
+OKLO    # Oklo
+HIMS    # Hims
+BULL    # WeBull
+HOOD    #RobinHood
+QS      # Quantum Scape
+CRCL    # Circle Internet Group
+RGTI    # Regetti Computing
+CRWV    # CoreWeave
+QBTS    # D-Wave Quantum Inc 
+OPEN    # Open Door Technologies
+SBET    # Sharplink Gaming
+ORCL    # Oracle
+SBUX    # Starbucks
+TMC     # The Metals Company
+INTC    # Intel
+IBM     # IBM
+BABA    # Allibaba
+MU      # Micron
+LIDR    # AEye Inc 
