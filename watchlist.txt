@@ -1,0 +1,32 @@
+# Stock Watchlist - Updated Weekly
+# Last Updated: [Date]
+# Format: One symbol per line, use # for comments
+
+# === LARGE CAP TECH ===
+AAPL    # Apple Inc.
+MSFT    # Microsoft
+GOOGL   # Alphabet Class A
+AMZN    # Amazon
+META    # Meta Platforms
+NVDA    # NVIDIA
+
+# === MOMENTUM STOCKS ===
+TSLA    # Tesla
+AMD     # Advanced Micro Devices
+NFLX    # Netflix
+
+# === FINANCIAL SECTOR ===
+JPM     # JPMorgan Chase
+BAC     # Bank of America
+GS      # Goldman Sachs
+
+# === ETFs ===
+SPY     # S&P 500 ETF
+QQQ     # Nasdaq 100 ETF
+IWM     # Russell 2000 ETF
+
+# === WEEKLY FOCUS ===
+# Add stocks you're specifically watching this week below
+PLTR    # Palantir
+COIN    # Coinbase
+RIVN    # Rivian
