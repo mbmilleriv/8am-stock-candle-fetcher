@@ -1,0 +1,57 @@
+name: Fetch Daily Stock Candles
+
+on:
+  schedule:
+    # Runs at 8:35 AM Eastern Time (12:35 PM UTC during EST, 1:35 PM UTC during EDT)
+    # Adjust based on your timezone
+    - cron: '35 13 * * 1-5'  # Monday-Friday only (market days)
+  workflow_dispatch:  # Allows manual triggering from GitHub UI
+    inputs:
+      fetch_mode:
+        description: 'Fetch mode'
+        required: true
+        default: 'today'
+        type: choice
+        options:
+        - today          # Get today's 8:30 AM candle
+        - yesterday      # Get yesterday's 8:30 AM candle
+        - last_5_days    # Get last 5 days of 8:30 AM candles
+      specific_symbols:
+        description: 'Specific symbols (comma-separated, leave empty for full watchlist)'
+        required: false
+        default: ''
+
+jobs:
+  fetch-candles:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pandas pytz
+    
+    - name: Run candle fetcher
+      env:
+        FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+        FETCH_MODE: ${{ github.event.inputs.fetch_mode || 'today' }}
+        SPECIFIC_SYMBOLS: ${{ github.event.inputs.specific_symbols || '' }}
+      run: python fetch_candles.py
+    
+    - name: Commit and push results
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/*.csv
+        git diff --staged --quiet || git commit -m "Add candle data for $(date +'%Y-%m-%d')"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
