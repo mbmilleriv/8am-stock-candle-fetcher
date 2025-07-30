@@ -1,6 +1,6 @@
 import requests
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import pytz
 import time
@@ -33,8 +33,8 @@ class FMPCandleFetcher:
             print(f"Error fetching data for {symbol}: {e}")
             return None
     
-    def get_latest_830_candle(self, symbol: str) -> Optional[Dict]:
-        """Get the most recent 8:00-8:30 AM ET candle"""
+    def get_830_candle_for_date(self, symbol: str, target_date: datetime.date) -> Optional[Dict]:
+        """Get the 8:00-8:30 AM ET candle for a specific date"""
         df = self.fetch_intraday_candles(symbol, "30min")
         
         if df is None or df.empty:
@@ -44,12 +44,11 @@ class FMPCandleFetcher:
         eastern = pytz.timezone('US/Eastern')
         df['date_et'] = df['date'].dt.tz_localize('UTC').dt.tz_convert(eastern)
         
-        # Get today's date in ET
-        today_et = datetime.now(eastern).date()
-        df_today = df[df['date_et'].dt.date == today_et]
+        # Filter for target date
+        df_target = df[df['date_et'].dt.date == target_date]
         
         # Look for the 8:30 AM ET candle
-        for idx, row in df_today.iterrows():
+        for idx, row in df_target.iterrows():
             candle_time = row['date_et'].time()
             if candle_time.hour == 8 and candle_time.minute == 30:
                 return {
@@ -63,19 +62,47 @@ class FMPCandleFetcher:
                     'volume': row['volume']
                 }
         
-        print(f"8:30 AM ET candle not found for {symbol} on {today_et}")
+        print(f"8:30 AM ET candle not found for {symbol} on {target_date}")
         return None
     
-    def fetch_multiple_stocks(self, symbols: List[str]) -> pd.DataFrame:
-        """Fetch the 8:00-8:30 AM candle for multiple stocks"""
+    def get_latest_830_candle(self, symbol: str) -> Optional[Dict]:
+        """Get the most recent 8:00-8:30 AM ET candle"""
+        eastern = pytz.timezone('US/Eastern')
+        today_et = datetime.now(eastern).date()
+        return self.get_830_candle_for_date(symbol, today_et)
+    
+    def fetch_multiple_stocks(self, symbols: List[str], mode: str = 'today') -> pd.DataFrame:
+        """Fetch candles for multiple stocks based on mode"""
         results = []
+        eastern = pytz.timezone('US/Eastern')
         
+        # Determine which dates to fetch based on mode
+        if mode == 'today':
+            dates_to_fetch = [datetime.now(eastern).date()]
+        elif mode == 'yesterday':
+            dates_to_fetch = [(datetime.now(eastern) - timedelta(days=1)).date()]
+        elif mode == 'last_5_days':
+            dates_to_fetch = []
+            current_date = datetime.now(eastern).date()
+            days_found = 0
+            days_back = 0
+            while days_found < 5 and days_back < 10:
+                check_date = current_date - timedelta(days=days_back)
+                if check_date.weekday() < 5:  # Monday = 0, Friday = 4
+                    dates_to_fetch.append(check_date)
+                    days_found += 1
+                days_back += 1
+        else:
+            dates_to_fetch = [datetime.now(eastern).date()]
+        
+        # Fetch data for each symbol and date
         for i, symbol in enumerate(symbols):
             print(f"Fetching data for {symbol} ({i+1}/{len(symbols)})...")
-            candle_data = self.get_latest_830_candle(symbol)
             
-            if candle_data:
-                results.append(candle_data)
+            for target_date in dates_to_fetch:
+                candle_data = self.get_830_candle_for_date(symbol, target_date)
+                if candle_data:
+                    results.append(candle_data)
             
             # Respect API rate limits
             time.sleep(0.5)
@@ -109,11 +136,26 @@ def main():
     if not API_KEY:
         raise ValueError("FMP_API_KEY environment variable not set")
     
-    # Load stock list from file
-    STOCK_LIST = load_stock_list('watchlist.txt')
+    # Get fetch mode from environment variable (for manual triggers)
+    FETCH_MODE = os.environ.get('FETCH_MODE', 'today')
+    
+    # Get specific symbols if provided (for manual triggers)
+    SPECIFIC_SYMBOLS = os.environ.get('SPECIFIC_SYMBOLS', '')
+    
+    # Load stock list
+    if SPECIFIC_SYMBOLS:
+        # Use specific symbols if provided
+        STOCK_LIST = [s.strip().upper() for s in SPECIFIC_SYMBOLS.split(',') if s.strip()]
+        print(f"Using specific symbols: {STOCK_LIST}")
+    else:
+        # Load from watchlist file
+        STOCK_LIST = load_stock_list('watchlist.txt')
+        print(f"Loaded {len(STOCK_LIST)} symbols from watchlist.txt")
     
     print(f"\n{'='*60}")
-    print(f"Fetching 8:00-8:30 AM ET candles at {datetime.now()}")
+    print(f"Fetching 8:00-8:30 AM ET candles")
+    print(f"Mode: {FETCH_MODE}")
+    print(f"Time: {datetime.now()}")
     print(f"{'='*60}\n")
     
     # Create data directory if it doesn't exist
@@ -121,12 +163,20 @@ def main():
     
     # Fetch candles
     fetcher = FMPCandleFetcher(API_KEY)
-    df = fetcher.fetch_multiple_stocks(STOCK_LIST)
+    df = fetcher.fetch_multiple_stocks(STOCK_LIST, mode=FETCH_MODE)
     
     if not df.empty:
-        # Save to CSV
-        date_str = datetime.now().strftime("%Y%m%d")
-        filename = f"data/candles_830am_{date_str}.csv"
+        # Save to CSV with appropriate filename
+        if FETCH_MODE == 'today':
+            date_str = datetime.now().strftime("%Y%m%d")
+            filename = f"data/candles_830am_{date_str}.csv"
+        elif FETCH_MODE == 'yesterday':
+            date_str = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
+            filename = f"data/candles_830am_{date_str}_backfill.csv"
+        else:
+            date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"data/candles_830am_last5days_{date_str}.csv"
+        
         df.to_csv(filename, index=False)
         
         print(f"\nSuccessfully fetched {len(df)} candles")
