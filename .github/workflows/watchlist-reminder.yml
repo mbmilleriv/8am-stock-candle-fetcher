@@ -1,0 +1,53 @@
+name: Watchlist Update Reminder
+
+on:
+  schedule:
+    # Runs every Sunday at 6 PM ET (10 PM UTC) to remind you to update
+    - cron: '0 22 * * 0'
+  workflow_dispatch:
+
+jobs:
+  create-issue-reminder:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Create Issue Reminder
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const date = new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          });
+          
+          const issueTitle = `📊 Weekly Watchlist Update Reminder - ${date}`;
+          const issueBody = `## Time to update your stock watchlist for the upcoming week!
+
+          ### Review Checklist:
+          - [ ] Review last week's performance
+          - [ ] Check for earnings announcements this week
+          - [ ] Add new stocks to watch
+          - [ ] Remove stocks no longer of interest
+          - [ ] Update sector focus if needed
+          
+          ### How to Update:
+          1. Go to the [watchlist.txt file](../../blob/main/watchlist.txt)
+          2. Click the pencil icon to edit
+          3. Make your changes
+          4. Commit with a message like "Update watchlist for week of ${date}"
+          
+          ### Quick Links:
+          - [View Recent Candle Data](../../tree/main/data)
+          - [Check Last Week's Workflow Runs](../../actions)
+          - [Edit Watchlist](../../edit/main/watchlist.txt)
+          
+          Remember: The daily candle fetcher will use the updated list starting Monday morning.`;
+          
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: issueTitle,
+            body: issueBody,
+            labels: ['watchlist-update', 'automated']
+          });
